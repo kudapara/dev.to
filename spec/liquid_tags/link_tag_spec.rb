@@ -1,12 +1,16 @@
 require "rails_helper"
 
-RSpec.describe LinkTag, type: :liquid_template do
+RSpec.describe LinkTag, type: :liquid_tag do
   let(:user) { create(:user, username: "username45", name: "Chase Danger", profile_image: nil) }
   let(:article) do
     create(:article, user_id: user.id, title: "test this please", tags: "tag1 tag2 tag3")
   end
   let(:org) { create(:organization) }
-  let(:org_user) { create(:user, organization_id: org.id) }
+  let(:org_user) do
+    user = create(:user)
+    create(:organization_membership, user: user, organization: org)
+    user
+  end
   let(:org_article) do
     create(:article, user_id: org_user.id, title: "test this please", tags: "tag1 tag2 tag3",
                      organization_id: org.id)
@@ -20,13 +24,18 @@ RSpec.describe LinkTag, type: :liquid_template do
     Liquid::Template.parse("{% link #{slug} %}")
   end
 
+  def generate_new_liquid_alias(slug)
+    Liquid::Template.register_tag("post", described_class)
+    Liquid::Template.parse("{% post #{slug} %}")
+  end
+
   def correct_link_html(article)
     tags = article.tag_list.map { |t| "<span class='ltag__link__tag'>##{t}</span>" }.reverse.join
     <<~HTML
       <div class='ltag__link'>
         <a href='#{article.user.path}' class='ltag__link__link'>
           <div class='ltag__link__pic'>
-            <img src='#{ProfileImage.new(article.user).get(150)}' alt='#{article.user.username} image'/>
+            <img src='#{ProfileImage.new(article.user).get(width: 150)}' alt='#{article.user.username} image'>
           </div>
         </a>
         <a href='#{article.path}' class='ltag__link__link'>
@@ -40,6 +49,11 @@ RSpec.describe LinkTag, type: :liquid_template do
         </a>
       </div>
     HTML
+  end
+
+  it 'can use "post" as an alias' do
+    liquid = generate_new_liquid_alias("/#{user.username}/#{article.slug}")
+    expect(liquid.render).to eq(correct_link_html(article))
   end
 
   it "raises an error when invalid" do

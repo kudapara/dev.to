@@ -1,5 +1,9 @@
 class PodcastEpisode < ApplicationRecord
   include AlgoliaSearch
+  include Searchable
+
+  SEARCH_SERIALIZER = Search::PodcastEpisodeSerializer
+  SEARCH_CLASS = Search::FeedContent
 
   acts_as_taggable
 
@@ -23,7 +27,10 @@ class PodcastEpisode < ApplicationRecord
   after_destroy :purge, :purge_all
   after_save    :bust_cache
 
-  before_validation :prefix_all_images
+  after_commit :index_to_elasticsearch, on: %i[create update]
+  after_commit :remove_from_elasticsearch, on: [:destroy]
+
+  before_validation :process_html_and_prefix_all_images
 
   scope :reachable, -> { where(reachable: true) }
   scope :published, -> { joins(:podcast).where(podcasts: { published: true }) }
@@ -42,7 +49,7 @@ class PodcastEpisode < ApplicationRecord
       attribute :user do
         { name: podcast.name,
           username: user_username,
-          profile_image_90: ProfileImage.new(user).get(90) }
+          profile_image_90: ProfileImage.new(user).get(width: 90) }
       end
       searchableAttributes ["unordered(title)",
                             "body_text",
@@ -66,10 +73,6 @@ class PodcastEpisode < ApplicationRecord
 
   def comments_blob
     comments.pluck(:body_markdown).join(" ")
-  end
-
-  def index_id
-    "podcast_episodes-#{id}"
   end
 
   def path
@@ -102,10 +105,6 @@ class PodcastEpisode < ApplicationRecord
     ActionView::Base.full_sanitizer.sanitize(processed_html)
   end
 
-  def published_at_date_slashes
-    published_at&.to_date&.strftime("%m/%d/%Y")
-  end
-
   def user
     podcast
   end
@@ -116,10 +115,6 @@ class PodcastEpisode < ApplicationRecord
   alias hotness_score zero_method
   alias search_score zero_method
   alias positive_reactions_count zero_method
-
-  def bust_cache
-    PodcastEpisodes::BustCacheJob.perform_later(id, path, podcast_slug)
-  end
 
   def class_name
     self.class.name
@@ -143,7 +138,15 @@ class PodcastEpisode < ApplicationRecord
 
   private
 
-  def prefix_all_images
+  def index_id
+    "podcast_episodes-#{id}"
+  end
+
+  def bust_cache
+    PodcastEpisodes::BustCacheWorker.perform_async(id, path, podcast_slug)
+  end
+
+  def process_html_and_prefix_all_images
     return if body.blank?
 
     self.processed_html = body.

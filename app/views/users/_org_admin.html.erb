@@ -1,6 +1,6 @@
-<%= javascript_pack_tag "colorPicker", defer: true %>
+<%= javascript_pack_tag "colorPreview", defer: true %>
 
-<%= javascript_include_tag "https://unpkg.com/@webcomponents/webcomponentsjs@2.2.10/webcomponents-loader.js", defer: true %>
+<%= render "shared/webcomponents_loader_script" %>
 <%= javascript_pack_tag "clipboardCopy", defer: true %>
 
 <style>
@@ -94,6 +94,28 @@
       <%= f.file_field :profile_image %>
     <% end %>
   </div>
+  <%= f.label :nav_image, "Image for the light theme" %>
+  <div class="field">
+    <% if @organization.nav_image_url.present? %>
+      <span class="image-present">
+        <img alt="<%= @organization.name %> profile image" src="<%= cloudinary(@organization.nav_image_url, 50) %>" />
+        <%= f.file_field :nav_image %>
+      </span>
+    <% else %>
+      <%= f.file_field :nav_image %>
+    <% end %>
+  </div>
+  <%= f.label :dark_nav_image, "Image for the dark theme" %>
+  <div class="field">
+    <% if @organization.dark_nav_image_url.present? %>
+      <span class="image-present">
+        <img alt="<%= @organization.name %> profile image" src="<%= cloudinary(@organization.dark_nav_image_url, 50) %>" />
+        <%= f.file_field :dark_nav_image %>
+      </span>
+    <% else %>
+      <%= f.file_field :dark_nav_image %>
+    <% end %>
+  </div>
   <div class="field">
     <%= f.label :twitter_username, "Twitter Username" %>
     <%= f.text_field :twitter_username %>
@@ -103,18 +125,8 @@
     <%= f.text_field :github_username %>
   </div>
   <div class="field">
-    <%= f.label :text_color_hex, "Text color (hex)" %>
-    <%= f.text_field :text_color_hex, placeholder: "#ffffff", class: "color-picker" %>
-    <div class="color-palette"></div>
-  </div>
-  <div class="field">
-    <%= f.label :bg_color_hex, "Background color (hex)" %>
-    <%= f.text_field :bg_color_hex, placeholder: "#000000", class: "color-picker" %>
-    <div class="color-palette"></div>
-  </div>
-  <div class="field">
     <%= f.label :url, "Site url" %>
-    <%= f.url_field :url, maxlength: 128, placeholder: "http://yoursite.com" %>
+    <%= f.url_field :url, maxlength: 128, placeholder: "https://yoursite.com" %>
   </div>
   <div class="field">
     <%= f.label :tag_line %>
@@ -124,13 +136,14 @@
     <%= f.label :summary %>
     <%= f.text_area :summary, maxlength: 250, placeholder: "Limit of 250 characters" %>
   </div>
+  <%= render partial: "shared/logo_design", locals: { f: f, account: @organization_membership.organization } %>
   <div class="field">
     <%= f.label :location %>
     <%= f.text_field :location, maxlength: 64, placeholder: "Limit of 64 characters" %>
   </div>
   <div class="field">
     <%= f.label :email, "Support Email" %>
-    <%= f.text_field :email, maxlength: 64, placeholder: "Limit of 64 characters" %>
+  <%= f.text_field :email, maxlength: 64, placeholder: "Limit of 64 characters" %>
   </div>
   <div class="field">
     <%= f.label :company_size, "Organization Size" %>

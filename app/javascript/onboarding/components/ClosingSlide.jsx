@@ -1,25 +1,15 @@
 import { h, Component } from 'preact';
 import PropTypes from 'prop-types';
 
-import Navigation from './Navigation';
-import { getContentOfToken } from '../utilities';
+import { updateOnboarding } from '../utilities';
 
 class ClosingSlide extends Component {
   componentDidMount() {
-    const csrfToken = getContentOfToken('csrf-token');
-    fetch('/onboarding_update', {
-      method: 'PATCH',
-      headers: {
-        'X-CSRF-Token': csrfToken,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ user: { last_onboarding_page: 'closing slide' } }),
-      credentials: 'same-origin',
-    });
+    updateOnboarding('closing slide');
   }
 
   render() {
-    const { previousLocation, prev, next, variant } = this.props;
+    const { previousLocation, variant } = this.props;
 
     const previousLocationListElement = () => {
       if (variant === '6' || variant === '8') {
@@ -37,7 +27,7 @@ class ClosingSlide extends Component {
           </div>
         );
       }
-      if (previousLocation !== 'none' && previousLocation !== null) {
+      if (previousLocation !== 'none' && previousLocation !== null && !previousLocation.startsWith('javascript')) {
         return (
           <a className="onboarding-previous-location" href={previousLocation}>
             <div>Or go back to the page you were on before you signed up</div>
@@ -184,8 +174,6 @@ class ClosingSlide extends Component {
 }
 
 ClosingSlide.propTypes = {
-  prev: PropTypes.func.isRequired,
-  next: PropTypes.string.isRequired,
   previousLocation: PropTypes.string.isRequired,
   variant: PropTypes.string.isRequired,
 };
